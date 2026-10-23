@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>海岳机电 · 点检维修协同 流程图（现状 / 数智化转型后）</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+  body{font-family:"Microsoft YaHei","PingFang SC",sans-serif;background:#f1f5f9;color:#0f172a;margin:0;padding:28px}
+  h1{font-size:22px;margin:0 0 4px}
+  .sub{color:#64748b;font-size:13px;margin-bottom:20px}
+  .panel{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:20px 24px;margin-bottom:24px}
+  .panel h2{font-size:17px;margin:0 0 2px}
+  .panel .desc{font-size:12.5px;color:#64748b;margin-bottom:12px}
+  .tagline{display:inline-block;font-size:11px;padding:2px 10px;border-radius:999px;margin-left:8px;vertical-align:middle}
+  .t-gray{background:#f1f5f9;color:#64748b;border:1px solid #e2e8f0}
+  .t-blue{background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe}
+  .pain{background:#fffbeb;border:1px solid #fde68a;color:#92400e;border-radius:8px;padding:8px 12px;font-size:12.5px;margin-top:10px}
+  .gain{background:#f0fdf4;border:1px solid #bbf7d0;color:#166534;border-radius:8px;padding:8px 12px;font-size:12.5px;margin-top:10px}
+  .mermaid{display:flex;justify-content:center}
+  footer{color:#64748b;font-size:11.5px;text-align:center;margin-top:10px}
+</style>
+</head>
+<body>
+<h1>海岳机电 · 设备点检与维修协同流程图</h1>
+<div class="sub">案例：一声异响之后的停机 · 依据《业务需求发现报告》证据编号 f00~f55 · 合成场景，仅供课程演示</div>
+
+<!-- ================= 现状流程图 ================= -->
+<div class="panel">
+  <h2>图一：现状流程（人工模式）<span class="tagline t-gray">数智化转型前</span></h2>
+  <div class="desc">范围：48 台设备 · 每日 144 次点检 · 非计划停机 96h/月 · 首次响应 40min（f00 / f12）。全部环节人工执行，无 AI 参与。</div>
+  <div class="mermaid">
+flowchart TD
+  A([开始：班前点检任务下达]) --> B["日常点检<br/>（纸质/终端自由填写，各技师描述不统一 f10）"]
+  B --> C{点检是否发现异常?}
+  C -- 正常 --> D["记录归档<br/>关键经验留在个人便签/微信群 f14"]
+  D --> Z1([当日点检结束])
+  C -- 异常 --> E["故障上报（口头/电话/群消息）<br/>描述不统一，下一班看不懂 f10"]
+  E --> F["停机确认 · LOTO 挂牌<br/>（授权人员人工执行 f40）"]
+  F --> G["维修派工（备件计划员人工分派 f20）<br/>异常先分派，超时限升级经理 f25"]
+  G --> H["查找历史案例/维修手册<br/>平均 30 分钟/次 f12"]
+  H --> I["维修执行<br/>备件核对靠人工（缺替代编码 f31）"]
+  I --> J["试运行（设备部按『修好』计时）"]
+  J --> K["复产确认（生产按『恢复稳定产出』计时）<br/>两口径分离，存在确认空档 f50"]
+  K --> L{复产是否顺畅?}
+  L -- 空档/争议 --> M["跨班反复确认、扯皮<br/>调度受理、备件核对 f54"]
+  M --> N["事后补录记录<br/>（离场补录，易脱节 f13）"]
+  L -- 正常 --> N
+  N --> O([结束：记录归档<br/>记录完整率与口径无保障])
+  style A fill:#eff6ff,stroke:#2563eb
+  style Z1 fill:#eff6ff,stroke:#2563eb
+  style O fill:#eff6ff,stroke:#2563eb
+  style M fill:#fef2f2,stroke:#dc2626
+  style D fill:#fffbeb,stroke:#d97706
+  style N fill:#fffbeb,stroke:#d97706
+  </div>
+  <div class="pain"><b>现状痛点（图中橙色/红色节点）：</b>① 点检描述不统一、经验留在个人笔记（f10/f14）；② 查历史案例平均 30 分钟（f12）；③ 复产确认双口径空档（f50）；④ 事后离场补录、记录易脱节（f13）；⑤ 备件编码缺替代关系靠人工核对（f31）。</div>
+</div>
+
+<!-- ================= 转型后流程图 ================= -->
+<div class="panel">
+  <h2>图二：数智化转型后流程（AI 辅助试点）<span class="tagline t-blue">点检辅助 + 派工建议 · 不自动执行维修</span></h2>
+  <div class="desc">试点：10 台设备 · 8 周 · 误报率 &lt; 8% · 记录完整率 ≥ 95% · 预算 15 万封顶（f02/f03）。AI 仅提示检索，不自动执行维修、不解除保护、不修改报警状态（f05/f32/f52）。</div>
+  <div class="mermaid">
+flowchart TD
+  S([开始：班前点检任务下达]) --> P1["① 日常点检 · 结构化填写<br/>判断依据当场可填、可暂存、随单交接 f10/f13"]
+  P1 --> G1{点检结果?}
+  G1 -- 正常 --> P2["暂存草稿 · 显示最后同步时间 f13"]
+  P2 --> Z([当日点检结束])
+  G1 -- 异常 --> P3["② 故障上报 · 结构化异常现象+判断依据<br/>关联原记录随单交接 f15"]
+  P3 --> G2{交接五要素齐全?<br/>编号/版本/状态/未解决事项/接手人 f23}
+  G2 -- 否 --> P4["退回补填（交接不成立）"]
+  P4 --> P1
+  G2 -- 是 --> P5["③ 停机确认 · LOTO 挂牌<br/>（授权人工节点，AI 不可替代 f40）"]
+  P5 --> P6["④ AI 数据质量前置校验<br/>主编号/事件时间/版本 f33"]
+  P6 --> G3{校验通过?}
+  G3 -- 否 --> P7["人工修复队列<br/>歧义记录不进自动推荐样本 f33"]
+  P7 --> P1
+  G3 -- 是 --> P8["⑤ AI 派工建议<br/>置信度≥阈值 · 显示原记录与待确认字段<br/>仅提示不改状态 f15/f52"]
+  P8 --> P9["⑥ 技师判断 · 采纳 or 暂停"]
+  P9 --> G4{提示与现场判断一致?}
+  G4 -- 否 --> P10["误报复核：技师暂停 → 备件计划员核对<br/>标注原因/接手人/确认时间 f44<br/>错误结果不覆盖原记录 f15"]
+  P10 --> P11["派工执行 · 按原流程 f25"]
+  G4 -- 是 --> P11
+  P11 --> P12["⑦ 试运行 · 维修完成计时（设备部口径）<br/>解除保护由授权人员执行 f40"]
+  P12 --> P13["⑧ 复产确认 · 恢复稳定产出计时（生产口径）<br/>双口径分开记录 f50/f53"]
+  P13 --> G5{复产空档 &gt; 0?}
+  G5 -- 是 --> P14["跨岗反馈：调度受理/备件核对<br/>关联原业务编号与资料版本 f54"]
+  P14 --> P15
+  G5 -- 否 --> P15["⑨ 审计留痕 · 处理链可完整重建<br/>业务编号/版本/引用/结果/人工改动/签核人 f45"]
+  P15 --> G6{触及停止条件?}
+  G6 -- 是 --> P16["暂停试点 · 负责人复盘 f42"]
+  G6 -- 否 --> P17["⑩ 反馈闭环：每周三方汇总<br/>先复测验收指标再更新规则 f55"]
+  P17 --> Z2([结束：记录完整率≥95% · 误报率&lt;8%])
+  style S fill:#eff6ff,stroke:#2563eb
+  style Z fill:#eff6ff,stroke:#2563eb
+  style Z2 fill:#f0fdf4,stroke:#16a34a
+  style P5 fill:#fef2f2,stroke:#dc2626
+  style P16 fill:#fef2f2,stroke:#dc2626
+  style P6 fill:#ecfeff,stroke:#0891b2
+  style P8 fill:#ecfeff,stroke:#0891b2
+  style P10 fill:#fffbeb,stroke:#d97706
+  </div>
+  <div class="gain"><b>转型改善点（青色为 AI 节点，红色为不可替代人工节点）：</b>① 判断依据结构化随单交接，接班可读（REQ-1）；② AI 派工建议带原记录引用，缩短查案例 30 分钟（f12/f15）；③ 数据前置校验 + 人工修复队列兜底（f33）；④ 误报「暂停—核对—继续」可重建路径（REQ-2）；⑤ 双口径计时分开记录，空档可见（REQ-4）；⑥ 审计链路与 90 天留存满足安全红线（f43/f45）。AI 边界：接口只读、不自动执行维修、不解除联锁（f32/f52）。</div>
+</div>
+
+<footer>海岳机电 · 点检维修协同 · 流程图（现状 / 数智化转型后） · 2026-10-23 · 需求为待验证假设，试点结论以 8 周实测为准</footer>
+
+<script>mermaid.initialize({startOnLoad:true,theme:'neutral',flowchart:{curve:'basis'}})</script>
+</body>
+</html>
