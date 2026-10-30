@@ -1,0 +1,834 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>海岳机电 · 点检维保问答</title>
+<link rel="icon" href="data:,">
+<style>
+  :root{
+    --bg:#f5f6f7; --panel:#ffffff; --line:#e3e5e8; --text:#1c2024; --muted:#6b7278;
+    --accent:#1d5f6b; --accent-soft:#e8f1f2; --user:#1d5f6b; --warn:#8a5a12; --warn-bg:#fdf6e8;
+    --radius:12px;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0}
+  body{background:var(--bg);color:var(--text);
+    font:14px/1.65 -apple-system,BlinkMacSystemFont,"Microsoft YaHei","PingFang SC","Segoe UI",sans-serif}
+  button{font:inherit;cursor:pointer}
+  .hidden{display:none !important}
+
+  /* ---------- 登录 ---------- */
+  .login-wrap{height:100%;display:flex;align-items:center;justify-content:center;padding:24px}
+  .login-card{width:100%;max-width:360px;background:var(--panel);border:1px solid var(--line);
+    border-radius:16px;padding:28px 26px}
+  .login-card h1{font-size:17px;font-weight:600;margin:0 0 4px}
+  .login-card p.sub{margin:0 0 20px;color:var(--muted);font-size:12.5px}
+  .field{margin-bottom:14px}
+  .field label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px}
+  .field input{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;
+    font:inherit;background:#fff;outline:none}
+  .field input:focus{border-color:var(--accent)}
+  .btn-primary{width:100%;padding:10px;border:0;border-radius:8px;background:var(--accent);
+    color:#fff;font-weight:500}
+  .btn-primary:disabled{opacity:.55;cursor:default}
+  .hint{margin-top:14px;font-size:12px;color:var(--muted);line-height:1.7}
+  .err{color:#b42318;font-size:12.5px;margin-top:10px;min-height:18px}
+
+  /* ---------- 主框架 ---------- */
+  .app{height:100%;display:flex}
+  .sidebar{width:264px;flex:0 0 264px;background:var(--panel);border-right:1px solid var(--line);
+    display:flex;flex-direction:column}
+  .brand{padding:16px 16px 12px;border-bottom:1px solid var(--line)}
+  .brand b{display:block;font-size:14px;font-weight:600}
+  .brand span{font-size:11.5px;color:var(--muted)}
+  .new-btn{margin:12px 16px;padding:9px;border:1px dashed var(--line);border-radius:8px;
+    background:#fff;color:var(--accent);font-size:13px}
+  .new-btn:hover{background:var(--accent-soft);border-color:var(--accent)}
+  .sess-list{flex:1;overflow:auto;padding:0 8px}
+  .sess{padding:9px 10px;border-radius:8px;font-size:13px;color:#333;cursor:pointer;
+    display:flex;gap:8px;align-items:center;margin-bottom:2px}
+  .sess:hover{background:#f1f3f4}
+  .sess.active{background:var(--accent-soft);color:var(--accent);font-weight:500}
+  .sess .t{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .sess .x{opacity:0;font-size:12px;color:var(--muted);border:0;background:none;padding:0 2px}
+  .sess:hover .x{opacity:1}
+  .me{padding:12px 16px;border-top:1px solid var(--line);font-size:12.5px;color:var(--muted);
+    display:flex;justify-content:space-between;align-items:center;gap:8px}
+  .me b{color:var(--text);font-weight:500}
+  .me button{border:0;background:none;color:var(--muted);font-size:12px}
+
+  .main{flex:1;display:flex;flex-direction:column;min-width:0}
+  .topbar{height:52px;flex:0 0 52px;border-bottom:1px solid var(--line);background:var(--panel);
+    display:flex;align-items:center;gap:12px;padding:0 18px}
+  .topbar .title{font-size:13.5px;font-weight:500;flex:1;overflow:hidden;
+    text-overflow:ellipsis;white-space:nowrap}
+  .debug-toggle{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);
+    user-select:none;cursor:pointer}
+  .menu-btn{display:none;border:0;background:none;font-size:16px}
+
+  .messages{flex:1;overflow:auto;padding:22px 18px 8px}
+  .wrap{max-width:780px;margin:0 auto}
+  .row{display:flex;margin-bottom:18px}
+  .row.user{justify-content:flex-end}
+  .bubble{max-width:86%;padding:10px 14px;border-radius:var(--radius);font-size:14px;line-height:1.75}
+  .row.user .bubble{background:var(--user);color:#fff;border-bottom-right-radius:4px}
+  .row.bot .bubble{background:var(--panel);border:1px solid var(--line);border-bottom-left-radius:4px;
+    max-width:100%}
+  .bubble p{margin:0 0 6px}
+  .bubble p:last-child{margin-bottom:0}
+  .bubble .li{padding-left:14px;position:relative;margin:3px 0}
+  .bubble .li:before{content:"·";position:absolute;left:4px;color:var(--muted)}
+  .bubble .gap{height:6px}
+  /* 选择器要比 .row.bot .bubble 更具体，否则拒答底色会被覆盖掉 */
+  .row.bot .bubble.refused{background:var(--warn-bg);border-color:#efe0bd;color:#5d4716}
+
+  sup.cite{color:var(--accent);cursor:pointer;font-size:11px;padding:0 1px;vertical-align:super}
+  sup.cite:hover{text-decoration:underline}
+
+  /* 引用卡片 */
+  .cites{margin-top:10px;border-top:1px dashed var(--line);padding-top:9px}
+  .cites .hd{font-size:11.5px;color:var(--muted);margin-bottom:6px;letter-spacing:.02em}
+  .cite-card{border:1px solid var(--line);border-radius:9px;padding:8px 10px;margin-bottom:6px;
+    cursor:pointer;background:#fcfdfd}
+  .cite-card:hover{border-color:#c9d6d8;background:#f7fafb}
+  .cite-card.flash{animation:flash 1s ease}
+  @keyframes flash{0%{background:#e8f1f2}100%{background:#fcfdfd}}
+  .cite-card .meta{font-size:12px;color:var(--accent);font-weight:500;margin-bottom:3px}
+  .cite-card .snip{font-size:12.5px;color:#4b5257;overflow:hidden;
+    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+  .cite-card .score{font-size:11px;color:var(--muted);margin-left:6px}
+
+  .debugline{font-size:11.5px;color:var(--muted);margin-top:8px;
+    border-top:1px dotted var(--line);padding-top:6px;font-family:ui-monospace,Menlo,monospace}
+
+  /* 状态 */
+  .status{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:13px;padding:4px 2px}
+  .dots{display:inline-flex;gap:3px}
+  .dots i{width:4px;height:4px;border-radius:50%;background:var(--muted);
+    animation:blink 1.2s infinite}
+  .dots i:nth-child(2){animation-delay:.2s}
+  .dots i:nth-child(3){animation-delay:.4s}
+  @keyframes blink{0%,60%,100%{opacity:.25}30%{opacity:1}}
+  .error-chip{margin-top:8px;padding:7px 10px;border-radius:8px;background:#fdecea;
+    color:#a8271b;font-size:12.5px}
+
+  /* 输入区 */
+  .composer{border-top:1px solid var(--line);background:var(--panel);padding:12px 18px 16px}
+  .composer .wrap{display:flex;gap:10px;align-items:flex-end}
+  textarea{flex:1;resize:none;border:1px solid var(--line);border-radius:10px;padding:10px 12px;
+    font:inherit;line-height:1.6;outline:none;max-height:150px;background:#fff}
+  textarea:focus{border-color:var(--accent)}
+  .send{flex:0 0 auto;padding:10px 18px;border:0;border-radius:10px;background:var(--accent);
+    color:#fff;font-weight:500}
+  .send:disabled{opacity:.5;cursor:default}
+  .send.stop{background:#b42318}
+  .tip{font-size:11.5px;color:var(--muted);margin-top:7px}
+
+  /* 原文弹层 */
+  .modal{position:fixed;inset:0;background:rgba(20,24,28,.42);display:flex;align-items:center;
+    justify-content:center;padding:24px;z-index:20}
+  .modal-box{background:#fff;border-radius:14px;max-width:760px;width:100%;max-height:82vh;
+    display:flex;flex-direction:column;overflow:hidden}
+  .modal-hd{padding:14px 18px;border-bottom:1px solid var(--line);display:flex;
+    justify-content:space-between;align-items:center;gap:12px}
+  .modal-hd b{font-size:13.5px;font-weight:500}
+  .modal-hd button{border:0;background:none;color:var(--muted);font-size:16px}
+  .modal-bd{padding:16px 18px;overflow:auto;font-size:13.5px;line-height:1.8}
+  .modal-bd .dim{color:var(--muted);font-size:12.5px;margin-bottom:8px}
+  .modal-bd .h{font-weight:600;color:var(--text);margin:10px 0 4px}
+  .modal-bd .p{margin:2px 0}
+  .modal-bd .li{position:relative;padding-left:14px;margin:2px 0}
+  .modal-bd .li::before{content:'·';position:absolute;left:2px;color:var(--accent)}
+  .modal-bd .gap{height:6px}
+  /* 表格：力矩/规格这类参数必须列对齐，否则现场容易串行读错 */
+  .modal-bd table.doc-table{border-collapse:collapse;width:100%;margin:8px 0;font-size:12.5px}
+  .modal-bd table.doc-table th,.modal-bd table.doc-table td{
+    border:1px solid var(--line);padding:5px 8px;text-align:left;vertical-align:top}
+  .modal-bd table.doc-table th{background:#f4f7f7;font-weight:600;white-space:nowrap}
+  .modal-bd table.doc-table td:first-child{white-space:nowrap}
+
+  /* 空态 */
+  .empty{max-width:620px;margin:8vh auto 0;text-align:center}
+  .empty-h{font-size:17px;font-weight:600;color:var(--text);margin-bottom:6px}
+  .empty-p{font-size:13px;color:var(--muted);line-height:1.7;margin-bottom:18px}
+  .chips{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+  .chip{display:inline-flex;align-items:center;gap:6px;padding:8px 12px;font-size:13px;
+    color:var(--text);background:var(--panel);border:1px solid var(--line);
+    border-radius:999px;cursor:pointer;font-family:inherit;text-align:left;
+    transition:border-color .15s,background .15s}
+  .chip:hover{border-color:var(--accent);background:var(--accent-soft)}
+  .chip-tag{font-size:11px;color:var(--accent);background:var(--accent-soft);
+    padding:1px 6px;border-radius:6px;flex:none}
+  .modal-bd .cur{background:#f2f8f8;border-left:3px solid var(--accent);padding:8px 10px;
+    border-radius:0 8px 8px 0;margin:8px 0}
+
+  @media(max-width:820px){
+    .sidebar{position:fixed;inset:0 auto 0 0;z-index:15;transform:translateX(-100%);
+      transition:transform .2s}
+    .sidebar.open{transform:none;box-shadow:0 0 0 100vmax rgba(0,0,0,.25)}
+    .menu-btn{display:block}
+    .bubble{max-width:100%}
+  }
+</style>
+</head>
+<body>
+
+<div id="login" class="login-wrap">
+  <div class="login-card">
+    <h1>海岳机电 · 点检维保问答</h1>
+    <p class="sub">依据维修手册、历史案例与安全规程作答，每条结论附原文出处</p>
+    <form id="login-form">
+      <div class="field">
+        <label for="u">工号</label>
+        <input id="u" autocomplete="username" value="t-001">
+      </div>
+      <div class="field">
+        <label for="p">密码</label>
+        <input id="p" type="password" autocomplete="current-password" value="123456">
+      </div>
+      <button class="btn-primary" id="login-btn" type="submit">登录</button>
+    </form>
+    <div class="err" id="login-err"></div>
+    <div class="hint">试用账号：技师 <b>t-001 / 123456</b>　管理员 <b>admin / 123456</b><br>
+      会话存在服务端，换设备登录可继续上次的对话。</div>
+  </div>
+</div>
+
+<div id="app" class="app hidden">
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <b>点检维保问答</b>
+      <span>海岳机电 · 试点作业区</span>
+    </div>
+    <button class="new-btn" id="new-session">＋ 新建会话</button>
+    <div class="sess-list" id="sess-list"></div>
+    <div class="me">
+      <span><b id="me-name">—</b> <span id="me-role"></span></span>
+      <button id="logout">退出</button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <button class="menu-btn" id="menu-btn">☰</button>
+      <div class="title" id="chat-title">新会话</div>
+      <label class="debug-toggle" title="显示相似度、耗时与 token 用量">
+        <input type="checkbox" id="debug"> 调试
+      </label>
+    </div>
+
+    <div class="messages" id="messages"><div class="wrap" id="msg-wrap"></div></div>
+
+    <div class="composer">
+      <div class="wrap">
+        <textarea id="q" rows="1" placeholder="例如：更换 M-0912 主轴轴承时，前端轴承压盖的预紧力矩是多少？"></textarea>
+        <button class="send" id="send">发送</button>
+      </div>
+      <div class="tip">Enter 发送 · Shift+Enter 换行 · 回答只依据知识库，未命中会提示转人工</div>
+    </div>
+  </main>
+</div>
+
+<div id="modal" class="modal hidden">
+  <div class="modal-box">
+    <div class="modal-hd">
+      <b id="modal-title">引用原文</b>
+      <button id="modal-close">✕</button>
+    </div>
+    <div class="modal-bd" id="modal-body"></div>
+  </div>
+</div>
+
+<script>
+/* =========================================================================
+   海岳机电 · 点检维保问答（单页，原生 JS）
+   - 鉴权：token 存 localStorage，跨设备靠服务端会话同步
+   - 流式：fetch + ReadableStream 手写 SSE 解析（EventSource 不支持 POST）
+   - 展示：正文里的 [来源: 编号 §章节 | 版本] 转成上标 [n]，卡片可点开原文
+   ========================================================================= */
+const API = '/api/v1';
+const store = {
+  token: localStorage.getItem('hy_token') || '',
+  user: JSON.parse(localStorage.getItem('hy_user') || 'null'),
+  sessionId: null,
+  sessions: [],
+  streaming: false,
+  abort: null,
+};
+
+const $ = (id) => document.getElementById(id);
+const el = (tag, cls, text) => {
+  const n = document.createElement(tag);
+  if (cls) n.className = cls;
+  if (text != null) n.textContent = text;
+  return n;
+};
+const esc = (s) => s.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+
+/* ---------------------------- 网络 ---------------------------- */
+async function api(path, opts = {}) {
+  const headers = Object.assign({ 'Content-Type': 'application/json' }, opts.headers || {});
+  if (store.token) headers.Authorization = 'Bearer ' + store.token;
+  const res = await fetch(API + path, Object.assign({}, opts, { headers }));
+  let body = null;
+  try { body = await res.json(); } catch (e) { /* 非 JSON */ }
+  if (!res.ok || (body && body.code !== 0)) {
+    const err = new Error((body && body.message) || '请求失败，请稍后重试');
+    err.code = body ? body.code : res.status;
+    err.status = res.status;
+    if (err.code === 40101) logout(true);
+    throw err;
+  }
+  return body.data;
+}
+
+/* ---------------------------- 登录 ---------------------------- */
+$('login-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const btn = $('login-btn'), errBox = $('login-err');
+  errBox.textContent = '';
+  btn.disabled = true; btn.textContent = '登录中…';
+  try {
+    const data = await api('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ username: $('u').value.trim(), password: $('p').value }),
+    });
+    store.token = data.access_token;
+    store.user = data.user;
+    localStorage.setItem('hy_token', store.token);
+    localStorage.setItem('hy_user', JSON.stringify(store.user));
+    enterApp();
+  } catch (err) {
+    errBox.textContent = err.message;
+  } finally {
+    btn.disabled = false; btn.textContent = '登录';
+  }
+});
+
+function logout(silent) {
+  store.token = ''; store.user = null; store.sessionId = null; store.sessions = [];
+  localStorage.removeItem('hy_token'); localStorage.removeItem('hy_user');
+  $('app').classList.add('hidden');
+  $('login').classList.remove('hidden');
+  $('msg-wrap').innerHTML = '';
+  if (!silent) $('login-err').textContent = '';
+}
+
+$('logout').addEventListener('click', () => logout());
+
+/* ---------------------------- 进入应用 ---------------------------- */
+async function enterApp() {
+  $('login').classList.add('hidden');
+  $('app').classList.remove('hidden');
+  $('me-name').textContent = store.user ? store.user.name : '—';
+  $('me-role').textContent = store.user
+    ? (store.user.role === 'admin' ? '管理员' : '技师') : '';
+  await loadSessions();
+  if (!store.sessionId) renderEmpty();
+}
+
+async function loadSessions() {
+  try {
+    const data = await api('/sessions');
+    store.sessions = data.items || [];
+  } catch (e) {
+    store.sessions = [];
+  }
+  renderSessions();
+}
+
+function renderSessions() {
+  const list = $('sess-list');
+  list.innerHTML = '';
+  if (!store.sessions.length) {
+    list.appendChild(el('div', 'sess', '还没有会话，直接提问即可'));
+    return;
+  }
+  store.sessions.forEach((s) => {
+    const row = el('div', 'sess' + (s.id === store.sessionId ? ' active' : ''));
+    row.appendChild(el('span', 't', s.title));
+    const x = el('button', 'x', '✕');
+    x.title = '关闭会话';
+    x.addEventListener('click', async (ev) => {
+      ev.stopPropagation();
+      if (!confirm('关闭后不再出现在列表，历史仍保留可查。确定关闭？')) return;
+      try {
+        await api('/sessions/' + s.id, { method: 'DELETE' });
+        if (store.sessionId === s.id) startNewSession();
+        loadSessions();
+      } catch (err) { alert(err.message); }
+    });
+    row.appendChild(x);
+    row.addEventListener('click', () => openSession(s.id, s.title));
+    list.appendChild(row);
+  });
+}
+
+function startNewSession() {
+  store.sessionId = null;
+  $('chat-title').textContent = '新会话';
+  renderEmpty();
+  renderSessions();
+  $('q').focus();
+}
+
+$('new-session').addEventListener('click', startNewSession);
+$('menu-btn').addEventListener('click', () => $('sidebar').classList.toggle('open'));
+
+async function openSession(id, title) {
+  if (store.streaming) return;
+  store.sessionId = id;
+  $('chat-title').textContent = title || '会话';
+  $('msg-wrap').innerHTML = '';
+  renderSessions();
+  $('sidebar').classList.remove('open');
+  try {
+    const data = await api('/sessions/' + id + '/messages');
+    const items = data.items || [];
+    if (!items.length) { renderEmpty(); return; }
+    items.forEach((m) => {
+      if (m.role === 'user') addUserBubble(m.content);
+      else addBotBubble(m.content, m.citations || [], { refused: !!m.refused, history: true });
+    });
+    scrollBottom();
+  } catch (err) {
+    if (err.code !== 40101) alert(err.message);
+  }
+}
+
+/* ---------------------------- 渲染 ---------------------------- */
+
+/* 空态：给四类语料各一条示例问题。
+   技师第一次打开时不知道这个助手能答什么，直接空着会让人以为坏了；
+   示例本身也顺带说明了「只答手册/案例/规程/备件」这个边界。 */
+const SAMPLES = [
+  { tag: '参数', q: '更换 M-0912 主轴轴承时，前端轴承压盖的预紧力矩是多少？' },
+  { tag: '判断', q: 'M-0912 主轴出现异响，怎么判断是不是轴承磨损？' },
+  { tag: '安全', q: '更换主轴轴承之前必须做哪些安全措施？' },
+  { tag: '案例', q: '上次 M-0912 主轴异响是怎么处理的？停机多久？' },
+  { tag: '备件', q: 'BRG-6204 有替代型号吗？' }
+];
+
+function renderEmpty() {
+  const wrap = $('msg-wrap');
+  wrap.innerHTML = '';
+  const box = el('div', 'empty');
+  const h = el('div', 'empty-h', '点检维保助手');
+  const p = el('div', 'empty-p',
+    '回答只依据维修手册、历史案例、安全规程与备件清单；找不到依据会提示转人工，不猜。');
+  const chips = el('div', 'chips');
+  SAMPLES.forEach((s) => {
+    const chip = el('button', 'chip');
+    chip.innerHTML = '<span class="chip-tag">' + s.tag + '</span>' + esc(s.q);
+    chip.addEventListener('click', () => {
+      if (store.streaming) return;
+      ta.value = s.q;
+      ta.style.height = 'auto';
+      ta.style.height = Math.min(ta.scrollHeight, 150) + 'px';
+      send();
+    });
+    chips.appendChild(chip);
+  });
+  box.appendChild(h); box.appendChild(p); box.appendChild(chips);
+  wrap.appendChild(box);
+}
+
+function addUserBubble(text) {
+  const row = el('div', 'row user');
+  const b = el('div', 'bubble');
+  b.textContent = text;
+  row.appendChild(b);
+  $('msg-wrap').appendChild(row);
+  return row;
+}
+
+/**
+ * 正文里的引用标记转上标。
+ * 编号以「正文中出现顺序」为准，卡片与之一一对应；
+ * 服务端返回的 items 只用来补片段、版本与 chunk_id，避免两套编号打架。
+ *
+ * 注意：必须先解析引用、再做 HTML 转义。反过来的话章节里的 ">" 会先变成 "&gt;"，
+ * 与 items.section_path 里的 ">" 对不上，卡片就会全部匹配失败。
+ */
+const CITE_RE = /\[来源\s*[:：]([^\]]+)\]/g;
+const MARK_RE = /\u0000(\d+)\u0000/g;
+
+function renderRich(bubble, text, items) {
+  const cards = [];
+  const seen = new Map();
+  const lines = text.split('\n');
+  let html = '';
+
+  for (const raw of lines) {
+    const marks = [];
+    const tmp = raw.replace(CITE_RE, (m, inner) => {
+      const seg = inner.split('|');
+      const head = (seg[0] || '').trim();
+      const ver = (seg[1] || '').trim();
+      const si = head.indexOf('§');
+      const src = (si >= 0 ? head.slice(0, si) : head).trim();
+      const sec = (si >= 0 ? head.slice(si + 1) : '').trim();
+      const key = src + '|' + sec;
+      if (!seen.has(key)) {
+        const item = (items || []).find(
+          (it) => it.source_id === src && (it.section_path || '').indexOf(sec) >= 0
+        );
+        seen.set(key, cards.length + 1);
+        cards.push({ n: cards.length + 1, src, sec, ver, item });
+      }
+      marks.push(seen.get(key));
+      return '\u0000' + (marks.length - 1) + '\u0000';
+    });
+
+    let line = esc(tmp).replace(MARK_RE, (m, i) => {
+      const n = marks[Number(i)];
+      return '<sup class="cite" data-cite="' + n + '">[' + n + ']</sup>';
+    });
+
+    const t = line.trim();
+    if (t.startsWith('- ')) html += '<div class="li">' + t.slice(2) + '</div>';
+    else if (!t) html += '<div class="gap"></div>';
+    else html += '<p>' + line + '</p>';
+  }
+  bubble.innerHTML = html;
+  return cards;
+}
+
+function renderCitationCards(container, cards, debugOn) {
+  if (!cards.length) return;
+  const box = el('div', 'cites');
+  box.appendChild(el('div', 'hd', '依据资料（点击查看原文）'));
+  cards.forEach((c) => {
+    const card = el('div', 'cite-card');
+    card.dataset.cite = c.n;
+    const meta = el('div', 'meta');
+    // 版本缺失时不显示「· 未标注」：卡片是索引，噪音越少越好；
+    // 正文里仍会写「未标注」，那是给读者判断依据是否够新用的。
+    const ver = (c.ver && c.ver !== '未标注') ? c.ver : '';
+    meta.appendChild(document.createTextNode(c.src + ' · §' + c.sec + (ver ? ' · ' + ver : '')));
+    if (debugOn && c.item && c.item.score != null) {
+      meta.appendChild(el('span', 'score', '相关度 ' + c.item.score));
+    }
+    card.appendChild(meta);
+    card.appendChild(el('div', 'snip', (c.item && c.item.snippet) || '（原文片段未缓存）'));
+    card.addEventListener('click', () => openCitation(c.item ? c.item.chunk_id : null));
+    box.appendChild(card);
+  });
+  container.appendChild(box);
+}
+
+function addBotBubble(text, items, opts = {}) {
+  const row = el('div', 'row bot');
+  const b = el('div', 'bubble' + (opts.refused ? ' refused' : ''));
+  const body = el('div', 'body');
+  b.appendChild(body);
+  row.appendChild(b);
+  $('msg-wrap').appendChild(row);
+
+  const cards = renderRich(body, text, items);
+  renderCitationCards(b, cards, debugOn());
+  if (opts.debug) b.appendChild(el('div', 'debugline', opts.debug));
+  if (opts.error) b.appendChild(el('div', 'error-chip', opts.error));
+  return { row, bubble: b, body };
+}
+
+function debugOn() { return $('debug').checked; }
+
+/* 上标点击：滚到对应卡片并高亮 */
+document.addEventListener('click', (e) => {
+  const sup = e.target.closest('sup.cite');
+  if (!sup) return;
+  const n = sup.dataset.cite;
+  const card = document.querySelector('.cite-card[data-cite="' + n + '"]');
+  if (!card) return;
+  card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  card.classList.remove('flash');
+  void card.offsetWidth;
+  card.classList.add('flash');
+});
+
+/* 原文弹层里的轻量排版。
+   表格必须渲染成真正的 <table>：用 │ 拼纯文本在比例字体下对不齐，
+   技师读力矩表时会串行（把「后端 25 N·m」看成「主轴法兰 80 N·m」）。
+   这里只做版式，不改原文措辞，且全部经过 esc() 转义。 */
+function prettyChunkHtml(text) {
+  const lines = text.split('\n');
+  const out = [];
+  let i = 0;
+  const isSep = (s) => /^\|?[\s:\-|]{3,}\|?$/.test(s);
+  const cells = (s) => s.replace(/^\||\|$/g, '').split('|').map((c) => c.trim());
+
+  while (i < lines.length) {
+    const s = lines[i].trim();
+
+    // 表格：连续的 | 行（跳过 |---| 分隔行）合成一个 table
+    if (s.startsWith('|')) {
+      const rows = [];
+      while (i < lines.length && lines[i].trim().startsWith('|')) {
+        const row = lines[i].trim();
+        if (!isSep(row)) rows.push(cells(row));
+        i++;
+      }
+      if (rows.length) {
+        const head = rows[0];
+        let t = '<table class="doc-table"><thead><tr>' +
+          head.map((c) => '<th>' + esc(c) + '</th>').join('') + '</tr></thead><tbody>';
+        for (const r of rows.slice(1)) {
+          t += '<tr>' + r.map((c) => '<td>' + esc(c) + '</td>').join('') + '</tr>';
+        }
+        out.push(t + '</tbody></table>');
+      }
+      continue;
+    }
+    i++;
+    if (!s) { out.push('<div class="gap"></div>'); continue; }
+    if (/^#{1,6}\s/.test(s)) {
+      out.push('<div class="h">' + esc(s.replace(/^#{1,6}\s*/, '')) + '</div>');
+      continue;
+    }
+    if (/^[-*]\s+/.test(s)) { out.push('<div class="li">' + esc(s.replace(/^[-*]\s+/, '')) + '</div>'); continue; }
+    out.push('<div class="p">' + esc(s) + '</div>');
+  }
+  return out.join('');
+}
+
+/* 上一块/下一块只给上下文：取前两行可读文本即可，不渲染完整表格 */
+function prettyChunkLines(text) {
+  return text.split('\n').map((raw) => {
+    const s = raw.trim();
+    if (!s || /^\|?[\s:\-|]{3,}\|?$/.test(s)) return '';
+    if (s.startsWith('|')) return s.replace(/^\||\|$/g, '').split('|').map((c) => c.trim()).join(' / ');
+    return s.replace(/^#{1,6}\s*/, '');
+  }).filter((s) => s);
+}
+
+/* 两行摘要，保留换行，避免把表格行压成一长串 */
+function chunkBrief(text) {
+  return prettyChunkLines(text).slice(0, 2).map(esc).join('<br>');
+}
+
+/* 原文弹层 */
+async function openCitation(chunkId) {
+  if (!chunkId) { alert('这条引用的原文未缓存，可能知识库已重建'); return; }
+  $('modal').classList.remove('hidden');
+  $('modal-title').textContent = '引用原文';
+  $('modal-body').innerHTML = '<div class="dim">加载中…</div>';
+  try {
+    const d = await api('/citations/' + chunkId);
+    $('modal-title').textContent = d.source_id + ' · §' + d.section_path + (d.version ? ' · ' + d.version : '');
+    let html = '';
+    if (d.prev) html += '<div class="dim">上文：' + chunkBrief(d.prev.text) + '…</div>';
+    html += '<div class="cur">' + prettyChunkHtml(d.text) + '</div>';
+    if (d.next) html += '<div class="dim">下文：' + chunkBrief(d.next.text) + '…</div>';
+    $('modal-body').innerHTML = html;
+  } catch (err) {
+    $('modal-body').innerHTML = '<div class="dim">' + esc(err.message) + '</div>';
+  }
+}
+$('modal-close').addEventListener('click', () => $('modal').classList.add('hidden'));
+$('modal').addEventListener('click', (e) => { if (e.target.id === 'modal') $('modal').classList.add('hidden'); });
+
+/* ---------------------------- 打字机 ---------------------------- */
+function makeTyper(node) {
+  let queue = '', raf = null;
+  const tick = () => {
+    if (!queue) { raf = null; return; }
+    const n = Math.max(1, Math.ceil(queue.length / 22));
+    node.textContent += queue.slice(0, n);
+    queue = queue.slice(n);
+    scrollBottom();
+    raf = requestAnimationFrame(tick);
+  };
+  return {
+    push(t) { queue += t; if (!raf) raf = requestAnimationFrame(tick); },
+    done() { node.textContent += queue; queue = ''; if (raf) cancelAnimationFrame(raf); raf = null; },
+  };
+}
+
+function scrollBottom() {
+  const box = $('messages');
+  box.scrollTop = box.scrollHeight;
+}
+
+/* ---------------------------- 发送与流式接收 ---------------------------- */
+const ta = $('q');
+ta.addEventListener('input', () => {
+  ta.style.height = 'auto';
+  ta.style.height = Math.min(ta.scrollHeight, 150) + 'px';
+});
+ta.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
+    e.preventDefault();
+    send();
+  }
+});
+$('send').addEventListener('click', () => {
+  if (store.streaming) { if (store.abort) store.abort.abort(); return; }
+  send();
+});
+
+async function send() {
+  const question = ta.value.trim();
+  if (!question || store.streaming) return;
+  if (question.length > 500) { alert('问题超出长度上限（500 字），请精简后重试'); return; }
+
+  ta.value = ''; ta.style.height = 'auto';
+  const empty = $('msg-wrap').querySelector('.empty');
+  if (empty) empty.remove();
+  addUserBubble(question);
+  $('q').focus();
+
+  /* 机器人气泡先建好：状态提示 → 打字机追加 → 结束后重排为富文本 */
+  const row = el('div', 'row bot');
+  const bubble = el('div', 'bubble');
+  const status = el('div', 'status');
+  const dots = el('span', 'dots');
+  dots.innerHTML = '<i></i><i></i><i></i>';
+  const statusText = el('span', '', '正在连接…');
+  status.appendChild(dots); status.appendChild(statusText);
+  const body = el('div', 'body');
+  bubble.appendChild(body);
+  bubble.appendChild(status);
+  row.appendChild(bubble);
+  $('msg-wrap').appendChild(row);
+  scrollBottom();
+
+  const typer = makeTyper(body);
+  let items = [], refused = false, full = '', debugMeta = null, errMsg = '';
+  store.streaming = true;
+  setSendState(true);
+  store.abort = new AbortController();
+
+  try {
+    const res = await fetch(API + '/chat?debug=' + (debugOn() ? 1 : 0), {
+      method: 'POST',
+      headers: Object.assign({ 'Content-Type': 'application/json' },
+        store.token ? { Authorization: 'Bearer ' + store.token } : {}),
+      body: JSON.stringify({ session_id: store.sessionId, question }),
+      signal: store.abort.signal,
+    });
+
+    // 推流前的校验失败：服务端返回的是普通 JSON 信封，而不是 SSE
+    if (!res.ok) {
+      const j = await res.json().catch(() => ({}));
+      throw Object.assign(new Error(j.message || '请求失败'), { code: j.code });
+    }
+
+    const reader = res.body.getReader();
+    const dec = new TextDecoder();
+    let buf = '';
+
+    const handle = (frame) => {
+      let event = 'message', data = '';
+      for (const line of frame.split('\n')) {
+        if (line.startsWith('event:')) event = line.slice(6).trim();
+        else if (line.startsWith('data:')) data += line.slice(5).trim();
+        // 以 ":" 开头的是心跳注释帧，直接忽略
+      }
+      if (!data) return;
+      let payload;
+      try { payload = JSON.parse(data); } catch (e) { return; }
+
+      if (event === 'meta') {
+        if (payload.session_id && payload.session_id !== store.sessionId) {
+          store.sessionId = payload.session_id;
+          loadSessions();
+        }
+      } else if (event === 'status') {
+        statusText.textContent = payload.text || '';
+      } else if (event === 'delta') {
+        if (status.parentNode) bubble.removeChild(status);
+        typer.push(payload.text);
+        full += payload.text;
+      } else if (event === 'retract') {
+        typer.done();
+        full = payload.text;
+        refused = true;
+        body.textContent = payload.text;
+      } else if (event === 'citations') {
+        items = payload.items || [];
+      } else if (event === 'debug') {
+        debugMeta = '置信度 ' + payload.confidence + ' · 覆盖度 ' + payload.coverage
+          + ' · 候选 ' + payload.top + ' 条';
+      } else if (event === 'error') {
+        errMsg = payload.message || '服务异常';
+      } else if (event === 'done') {
+        refused = refused || !!payload.refused;
+        if (payload.usage && payload.usage.tokens_in) {
+          const extra = '耗时 ' + payload.elapsed_ms + ' ms · ' +
+            payload.usage.tokens_in + '→' + payload.usage.tokens_out + ' tok · ' +
+            (payload.usage.model || '');
+          debugMeta = debugMeta ? debugMeta + ' · ' + extra : extra;
+        } else if (payload.elapsed_ms != null) {
+          const extra = '耗时 ' + payload.elapsed_ms + ' ms';
+          debugMeta = debugMeta ? debugMeta + ' · ' + extra : extra;
+        }
+      }
+    };
+
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      let i;
+      while ((i = buf.indexOf('\n\n')) >= 0) {
+        const frame = buf.slice(0, i);
+        buf = buf.slice(i + 2);
+        handle(frame);
+      }
+    }
+    if (buf.trim()) handle(buf);
+    typer.done();
+  } catch (err) {
+    typer.done();
+    if (err.name === 'AbortError') {
+      errMsg = '已停止生成';
+    } else {
+      errMsg = err.message || '请求失败';
+      if (err.code === 40101) logout(true);
+    }
+  } finally {
+    store.streaming = false;
+    store.abort = null;
+    setSendState(false);
+    if (status.parentNode) bubble.removeChild(status);
+
+    // 结束后重排：正文转富文本、挂引用卡片、按需显示调试信息
+    if (full) {
+      const cards = renderRich(body, full, items);
+      if (refused) bubble.classList.add('refused');
+      renderCitationCards(bubble, cards, debugOn());
+    }
+    if (debugOn() && debugMeta) bubble.appendChild(el('div', 'debugline', debugMeta));
+    if (errMsg) bubble.appendChild(el('div', 'error-chip', errMsg));
+    loadSessions();
+    scrollBottom();
+  }
+}
+
+function setSendState(streaming) {
+  const btn = $('send');
+  btn.textContent = streaming ? '停止' : '发送';
+  btn.classList.toggle('stop', streaming);
+}
+
+/* ---------------------------- 启动 ---------------------------- */
+$('debug').checked = localStorage.getItem('hy_debug') === '1';
+$('debug').addEventListener('change', (e) => {
+  localStorage.setItem('hy_debug', e.target.checked ? '1' : '0');
+});
+
+(async function boot() {
+  if (!store.token) return;
+  try {
+    const me = await api('/auth/me');
+    store.user = me;
+    enterApp();
+  } catch (e) {
+    logout(true);
+  }
+})();
+</script>
+</body>
+</html>
